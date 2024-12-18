@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+
+        <style>
+        .customIndent {
+            padding-left: 15em;
+        }
+        </style>
+
+
+        <title>Music Bingo Admin Page</title>
+    </head>
+    <body>
+        
+
+        <div class="container text-center mt-5">
+            <h3 class="mb-4">Music Bingo Admin</h3>
+       
+            <h3>Player ID Status</h3>
+                <p>Active Player IDs: {{active_player_ids}}</p>
+                <p>Inactive Player IDs: {{inactive_player_ids}}</p>
+                <p>Invalid login flags: {{invalid_login}}</p>
+                
+            <button class="btn btn-primary" style="margin: 10px" id="signOffAll">Sign Off All Players</button>
+        </div>
+
+        <script type="text/javascript">
+            host_url_main = "http://"+"{{run_on_host}}"+":"+"{{using_port}}"; 
+        
+            const signOffAllButton = document.getElementById('signOffAll');
+
+            // Click event listener to claim a win
+            signOffAllButton.addEventListener('click', signOffAllAction);
+
+// Following function needs to be synchronous because we come back to this page
+// to show results of signing off the players. If call is made async, there
+// is a race condition with the update of the server data and the display of
+// the admin page.
+function signOffAllAction()
+{
+    syncJsonGetRequest(host_url_main+'/signOffAll');
+}
+
+function syncJsonGetRequest(url) 
+{
+    // Create a new instance of XMLHttpRequest
+    var xhr = new XMLHttpRequest();
+    // Initialize the request: true for async, false for sync. We set it to false.
+    xhr.open("GET", url, false); // false makes the request synchronous
+    // Set the request header (optional, depending on API requirements)
+    xhr.setRequestHeader("Content-Type", "application/json");
+    // Send the request
+    xhr.send();
+
+    // Reload this page to show changes to the data
+    location.reload();
+}
+
+        </script>
+ 
+    </body>
+</html>

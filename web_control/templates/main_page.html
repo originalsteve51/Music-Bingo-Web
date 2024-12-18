@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
+
+        <style>
+        .customIndent {
+            padding-left: 15em;
+        }
+        </style>
+
+
+        <title>Music Bingo Player Page</title>
+        
+        <script>
+            // Auto-refresh the page
+            //setInterval(() => {
+            //    location.reload();
+            //}, 5000);
+            host_url_main = "http://"+"{{run_on_host}}"+":"+"{{using_port}}"; 
+            console.log('Host url set from env vars: ', host_url_main);
+            update_interval = "{{update_interval}}"
+            
+            console.log('Update interval set from env vars: ',update_interval);
+        </script>
+        
+    </head>
+    <body>
+        
+
+        <div class="container text-center mt-5">
+            <h3 class="mb-4">Music Bingo!</h3>
+            <p id="responseMessage"/>
+        </div>
+
+<!--
+        <form id="dataForm" method="post">
+            <div class="container text-center mt-5">
+                <label for="textInput">Enter text:</label>
+                <input type="text" id="textInput" name="text" required>
+                <button type="button" id="submitButton">Submit</button>
+            
+            </div>       
+        </form>
+-->
+        <div class="container text-center mt-4">
+            
+            <button class="btn btn-primary btn-lg" id="stopButton">
+                Vote to Stop this Song
+            </button>
+        </div>
+        <script src="{{ url_for('static', filename='js/script.js')  }}"></script>
+    </body>
+</html>

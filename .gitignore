@@ -1,0 +1,6 @@
+# My specific ignores (the rest is fron GitHub template for Python)
+.cache
+*.png
+.cards.html
+*.csv
+*.bin
