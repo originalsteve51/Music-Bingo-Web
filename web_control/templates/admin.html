@@ -37,7 +37,7 @@
             // Click event listener to claim a win
             signOffAllButton.addEventListener('click', signOffAllAction);
 
-// Following function needs to be synchronous because we come back to this page
+// The Following function needs to be synchronous because we come back to this page
 // to show results of signing off the players. If call is made async, there
 // is a race condition with the update of the server data and the display of
 // the admin page.
