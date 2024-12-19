@@ -759,6 +759,10 @@ class CommandProcessor(cmd.Cmd):
 
         self.web_monitor = None 
 
+    def do_countplayers(self, _):
+        player_count = int(requests.get(web_controller_url+'/get_player_count').content)
+        print(f'There are {player_count} active players.')
+
     def do_webload(self, _):
         if self.active_game:
             print(f'Loading {self.active_game.n_cards} cards made from {self.active_game.playlist_name} to web controller')
