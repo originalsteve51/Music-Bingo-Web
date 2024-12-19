@@ -319,6 +319,7 @@ def sign_off_all():
     return redirect(url_for('admin'))
 
 
+
 # !!! TODO If the session already has 'player_id' in it then do not
 #     permit rejoin with another id. First id must be released! Then join again.
 @app.route('/join', methods=['GET'])
@@ -457,6 +458,11 @@ def submit():
 @app.route('/get_stop_count', methods=['GET'])
 def get_stop_count():
     return str(len(stop_requests))
+
+@app.route('/get_player_count', methods=['GET'])
+def get_player_count():
+    return str(len(active_player_ids))
+
 
 @app.route('/debug', methods=['GET'])
 def card_debug():
