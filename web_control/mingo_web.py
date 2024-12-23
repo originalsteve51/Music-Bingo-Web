@@ -5,6 +5,7 @@ import os, json
 import time
 
 
+
 # Create the Flask application
 app = Flask(__name__)
 
@@ -57,10 +58,6 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Headers']='Content-Type'
     return response
 
-# A QR code on each MINGO sheet has the URL for that sheet signified with
-# an integer passed in the URL string. That integer is the player id
-# that is passed each time a 'Stop Playing' button is tapped by a user.
-
 @app.route('/<int:player_id>', methods=['GET'])
 def assign_player_id(player_id):
     global active_player_ids
@@ -106,7 +103,7 @@ def release_player_id():
         if release_id in active_player_ids:
             active_player_ids.remove(release_id)
             inactive_player_ids.add(release_id)
-
+            
         session.pop('player_id', None)
 
         if 'player_id' in session:
@@ -315,6 +312,7 @@ def sign_off_all():
     for _ in range (len(active_player_ids)):
         player_id = active_player_ids.pop()
         inactive_player_ids.add(player_id)
+
 
     return redirect(url_for('admin'))
 

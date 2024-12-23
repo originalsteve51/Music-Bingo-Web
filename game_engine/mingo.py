@@ -829,6 +829,9 @@ class CommandProcessor(cmd.Cmd):
                 votes_required = {"votes_required": next_trigger_votes}
                 requests.post(web_controller_url+'/set_votes_required',
                                     json=json.dumps(votes_required))
+                if self.web_monitor:
+                    print('Stopping the Web Monitor. You may re-start it to resume play.')      
+                    self.web_monitor.stop()
 
             else:
                 print('You must enter the number of votes that will cause the next song to play')    
