@@ -33,8 +33,6 @@ refresh_screen = []
 win_claims = []
 playlist_name = None
 
-active_player_ids = set()
-inactive_player_ids = set([0,1,2,3,4,5,6,7,8,9])
 
 # The tapped/untapped state of a player's game is kept in JavaScript persistent storage
 # on the browser. This allows state to persist between screen refreshes in the case where
@@ -47,8 +45,12 @@ inactive_player_ids = set([0,1,2,3,4,5,6,7,8,9])
 # untapped except for the center square. When a GET is issued for the card page, the flag 
 # determines whether to use saved state or to wipe the board (and the state) to its starting
 # untapped status.
+active_player_ids = set()
+inactive_player_ids = set([0,1,2,3,4,5])
 reset_player_storage = [False for _ in range(len(inactive_player_ids))]
 invalid_login = [True for _ in range(len(inactive_player_ids))]
+
+lock_flag = False
 
 
 @app.after_request
@@ -120,52 +122,34 @@ def release_player_id():
                             run_on_host=run_on_host, 
                             using_port=using_port)
     
+@app.route('/addInactivePlayer', methods=['GET'])
+def add_inactive_player():
+    global inactive_player_ids
+    global reset_player_storage  
+    global invalid_login
 
+    try:
+        new_player_id = max(inactive_player_ids)+1
+    except ValueError:
+        # If there are no more inactive player ids, 
+        # base the new id on the largest active player id
+        new_player_id = max(active_player_ids)+1
 
-"""
-@app.route('/', methods=['GET'])
-def index():
-    global cards
-    global player_ids
+    inactive_player_ids.add(new_player_id)
     
-    print ('Player_ids: ', player_ids)
-    if 'player_id' in session:
-        # Already have a player id, just make sure it is not available
-        # to anyone else.
-        player_id = session['player_id']
-        print(f'player id {player_id} is in session ')
-        if player_id in player_ids:
-            player_ids.remove(player_id)
-            print(f'removed {player_id} from available ids')
-    else:
-        # Get an available player id and assign it, popping it
-        # to remove it from available ids
-        template = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>No More Mingo Cards</title>
-    </head>
-    <body>
-        <h1>Sorry! All Music Bingo cards have been assigned.</h1>
-    </body>
-    </html>
-    '''
-        try:
-            player_id = player_ids.pop()
-            session['player_id'] = player_id
-            print(f'obtained {player_id} from {player_ids} and assigned it')
-        except KeyError:
-            return render_template_string(template)
+    # Also need to grow the invalid_login and reset_player_storage lists
+    invalid_login.append(True)
+    reset_player_storage.append(False)
 
-    if len(cards) != 0:
-        return redirect(url_for('card'))
-    else:
-        return render_template('game_not_ready.html', 
-                                player_id=player_id, 
-                                run_on_host=run_on_host, 
-                                using_port=using_port)
-"""
+    return redirect(url_for('admin'))
+
+@app.route('/lockGame', methods=['GET'])
+def lock_game():
+    global lock_flag
+
+    lock_flag = not lock_flag
+
+    return redirect(url_for('admin'))
   
 @app.route('/card', methods=['GET'])
 def card():
@@ -286,6 +270,7 @@ def admin():
     global invalid_login
     
     response = make_response( render_template('admin.html',
+                            lock_flag=lock_flag,
                             active_player_ids=active_player_ids,
                             inactive_player_ids=inactive_player_ids,
                             invalid_login=invalid_login,
@@ -326,32 +311,41 @@ def join_game():
     global inactive_player_ids
     global invalid_login
 
-    if 'player_id' in session:
-        # This user already has a player id. Handle an attempt to join again
-        # by starting the player over with a new id. Return the current id to
-        # the pool of available ids.
-        player_id = session['player_id']
+    if not lock_flag:
+        if 'player_id' in session:
+            # This user already has a player id. Handle an attempt to join again
+            # by starting the player over with a new id. Return the current id to
+            # the pool of available ids.
+            player_id = session['player_id']
 
-        new_player_id = min(inactive_player_ids)
-        inactive_player_ids.remove(new_player_id)
-        inactive_player_ids.add(player_id)
-        if player_id in active_player_ids:
-            active_player_ids.remove(player_id)
+            try:
+                new_player_id = min(inactive_player_ids)
+            except ValueError:
+                # If we use up all the pre-allocated player ids, grow by one and carry on.
+                new_player_id = max(active_player_ids)+1
+                inactive_player_ids.add(new_player_id)
+                # Also need to grow the invalid_login and reset_player_storage lists
+                invalid_login.append(True)
+                reset_player_storage.append(False)
+
+            inactive_player_ids.remove(new_player_id)
             inactive_player_ids.add(player_id)
-    
-        return activate_player(new_player_id)
-        """
-        return render_template('already_have_id.html', 
-                            player_id=player_id, 
+            if player_id in active_player_ids:
+                active_player_ids.remove(player_id)
+                inactive_player_ids.add(player_id)
+        
+            return activate_player(new_player_id)
+        
+        elif len(inactive_player_ids) > 0:
+            # player_id = inactive_player_ids.pop()
+            player_id = min(inactive_player_ids)
+            inactive_player_ids.remove(player_id)
+            return activate_player(player_id)
+    else:
+        return render_template('game_is_locked.html', 
                             run_on_host=run_on_host, 
                             using_port=using_port)
-        """
-    
-    elif len(inactive_player_ids) > 0:
-        # player_id = inactive_player_ids.pop()
-        player_id = min(inactive_player_ids)
-        inactive_player_ids.remove(player_id)
-        return activate_player(player_id)
+       
     
 
 

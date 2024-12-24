@@ -11,10 +11,10 @@
   <title>Music Bingo</title>
  
          <div class="container text-center mt-5">
-            <h3 class="mb-4">You Are Using Player Id {{player_id}}</h3>
+            <h3 class="mb-4">The Game is Locked</h3>
        
-            <p>You are already signed into the game.</p>
-            <button class="btn btn-primary" style="margin: 10px" id="resume_game">Resume Playing Game</button>
+            <p>No more players can join this game. When a new game is started, try to join it.</p>
+            <button class="btn btn-primary" style="margin: 10px" id="resume_game">Request to Join</button>
          </div>
 
         <script>
@@ -30,7 +30,7 @@
 
             function resumeAction()
             {
-                location.href = host_url_main+'/card';
+                location.href = host_url_main+'/join';
             }
 
         </script>

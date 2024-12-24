@@ -25,17 +25,23 @@
                 <p>Active Player IDs: {{active_player_ids}}</p>
                 <p>Inactive Player IDs: {{inactive_player_ids}}</p>
                 <p>Invalid login flags: {{invalid_login}}</p>
-                
-            <button class="btn btn-primary" style="margin: 10px" id="signOffAll">Sign Off All Players</button>
+                <p>Players Locked from Joining: {{lock_flag}}</p>
+            <button class="btn btn-primary" style="margin: 10px" id="addToInactiveList">Add to Inactive Player List</button>    
+            <button class="btn btn-warning" style="margin: 10px" id="lockPlayerToggle">Lock/Unlock the Game</button>    
+            <button class="btn btn-danger" style="margin: 10px" id="signOffAll">Sign Off All Players</button>
         </div>
 
         <script type="text/javascript">
             host_url_main = "http://"+"{{run_on_host}}"+":"+"{{using_port}}"; 
         
             const signOffAllButton = document.getElementById('signOffAll');
-
-            // Click event listener to claim a win
             signOffAllButton.addEventListener('click', signOffAllAction);
+
+            const addInactiveButton = document.getElementById('addToInactiveList');
+            addInactiveButton.addEventListener('click', addInactiveAction);
+
+            const lockGameButton = document.getElementById('lockPlayerToggle');
+            lockGameButton.addEventListener('click', lockGameAction);
 
 // The Following function needs to be synchronous because we come back to this page
 // to show results of signing off the players. If call is made async, there
@@ -44,6 +50,16 @@
 function signOffAllAction()
 {
     syncJsonGetRequest(host_url_main+'/signOffAll');
+}
+
+function addInactiveAction()
+{
+    syncJsonGetRequest(host_url_main+'/addInactivePlayer');
+}
+
+function lockGameAction()
+{
+    syncJsonGetRequest(host_url_main+'/lockGame');
 }
 
 function syncJsonGetRequest(url) 
