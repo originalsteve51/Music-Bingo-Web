@@ -63,7 +63,7 @@ def assign_player_id(player_id):
     global active_player_ids
     global inactive_player_ids
 
-    session.permanent = True
+    # session.permanent = True
 
     if not player_id in active_player_ids and player_id in inactive_player_ids:
         print('Assigning player id', player_id)
@@ -327,30 +327,49 @@ def join_game():
     global invalid_login
 
     if 'player_id' in session:
-        # This user already has a player id, do not allow a re-join to occur!
+        # This user already has a player id. Handle an attempt to join again
+        # by starting the player over with a new id. Return the current id to
+        # the pool of available ids.
         player_id = session['player_id']
-        if not invalid_login[player_id]:
-            return render_template('already_have_id.html', 
-                                player_id=player_id, 
-                                run_on_host=run_on_host, 
-                                using_port=using_port)
-        else:
-            player_id = inactive_player_ids.pop()
-            active_player_ids.add(player_id)
-            return activate_player(player_id)
-           
 
+        new_player_id = min(inactive_player_ids)
+        inactive_player_ids.remove(new_player_id)
+        inactive_player_ids.add(player_id)
+        if player_id in active_player_ids:
+            active_player_ids.remove(player_id)
+            inactive_player_ids.add(player_id)
+    
+        return activate_player(new_player_id)
+        """
+        return render_template('already_have_id.html', 
+                            player_id=player_id, 
+                            run_on_host=run_on_host, 
+                            using_port=using_port)
+        """
+    
     elif len(inactive_player_ids) > 0:
-        player_id = inactive_player_ids.pop()
-        active_player_ids.add(player_id)
+        # player_id = inactive_player_ids.pop()
+        player_id = min(inactive_player_ids)
+        inactive_player_ids.remove(player_id)
         return activate_player(player_id)
+    
 
 
 
 def activate_player(player_id):        
+    global active_player_ids
+    global inactive_player_ids
+    global invalid_login
+    global reset_player_storage
+
     session['player_id'] = player_id
     reset_player_storage[player_id] = True
     invalid_login[player_id] = False
+
+    active_player_ids.add(player_id)
+    if player_id in inactive_player_ids:
+        inactive_player_ids.remove(player_id)
+
 
     if len(cards) != 0:
         return redirect(url_for('card'))
