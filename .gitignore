@@ -4,3 +4,5 @@
 .cards.html
 *.csv
 *.bin
+*.log
+.gitignore
