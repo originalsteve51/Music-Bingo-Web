@@ -122,7 +122,10 @@
     </div>
 
     <div class="container text-center mt-4">
-        <button class="btn btn-danger" style="margin: 10px" id="stopButton">
+        <!-- Initially the Voting button is not visible. The auto command with a
+             value of 1 or higher will cause it to appear so users can vote
+             to skip to the next song -->
+        <button class="btn btn-danger" style="margin: 10px; display: none;" id="stopButton">
             Vote to Skip to Next Song
         </button>
     </div>

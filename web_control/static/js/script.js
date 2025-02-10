@@ -129,16 +129,18 @@ async function updateStops()
   // Note that the enabled state of the buttons is controlled by 0 votes required
   if (result.votes_required > 0)
   {
-    stopButton.disabled = false;
+    stopButton.style.display = 'block';
     winnerButton.disabled = false;
     votesRequired.textContent = `Votes needed to skip to next song: ${result.votes_required}`;
   }
   else
   {
-    stopButton.disabled = true;
-    winnerButton.disabled = true;
-    responseMessage.textContent = `The system is waiting for the Game Operator to start it.`;
-    votesRequired.textContent = "";
+    // stopButton.disabled = true;
+    stopButton.style.display = 'none';
+    winnerButton.disabled = false;
+    // responseMessage.textContent = `The system is waiting for the Game Operator to start it.`;
+    responseMessage.textContent = '';
+    votesRequired.textContent = '';
   }
 
   if (result.votes_required > 0) 
