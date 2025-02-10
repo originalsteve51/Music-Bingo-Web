@@ -659,7 +659,7 @@ class GameMonitor():
         else:
             return False
 
-    def show_played_tracks(self, active_game, replay_track):
+    def show_played_tracks(self, active_game, replay_track, cmd_processor):
         num_played = len(self.played_track_names)
         num_remaining = self.num_total_tracks - num_played
 
@@ -679,6 +679,11 @@ class GameMonitor():
                         replay_index = replay_index
                         print (f'Replay index: {replay_index}')
                         active_game.play_previous_track(replay_index) # was -1
+
+                        # Since we are playing another track, clear out the
+                        # votes that may have been cast to skip
+                        clear_web_votes(cmd_processor)
+
                     else:
                         print('There is not an active game.')
                 else:
@@ -697,6 +702,7 @@ class WebMonitor():
         self._thread = None
         self._cmdprocessor = cmdprocessor
         self._trigger_vote_count = int(trigger_vote_count)
+        self._voting_allowed = True
 
     def start(self):
         if not self._running:
@@ -706,6 +712,7 @@ class WebMonitor():
             requests.get(web_controller_url+'/clear')
             print('trying to start WebMonitor')
             self._running = True
+            self._voting_allowed = True
             self._thread = threading.Thread(target=self._run)
             self._thread.start()
             print('should be started')
@@ -715,6 +722,9 @@ class WebMonitor():
         self._running = False
         if self._thread is not None:
             self._thread.join()
+
+    def no_voting(self):
+        self._voting_allowed = False
     
     def _run(self):
         while self._running:
@@ -737,6 +747,8 @@ class WebMonitor():
                 requests.get(web_controller_url+'/clear')
                 self._cmdprocessor.do_nexttrack(self._cmdprocessor)
             time.sleep(1)
+
+
 
 
 #-------------------------------------------------------------------
@@ -830,9 +842,9 @@ class CommandProcessor(cmd.Cmd):
                 requests.post(web_controller_url+'/set_votes_required',
                                     json=json.dumps(votes_required))
                 if self.web_monitor:
-                    print('Stopping the Web Monitor. You may re-start it to resume play.')      
-                    self.web_monitor.stop()
-
+                    print('No more voting via the Web Monitor. You may re-start it to resume play.')      
+                    # self.web_monitor.stop()
+                    self.web_monitor.no_voting()
             else:
                 print('You must enter the number of votes that will cause the next song to play')    
 
@@ -922,6 +934,8 @@ If no number is specified, all cards are displayed."""
         if self.active_game:
             self.active_game.play_next_track()
             self.active_game.write_game_state()
+            clear_web_votes(self)
+
         else:
            print('There is not an active game. Create one using "'"makegame"'" and try again.')  
 
@@ -975,7 +989,7 @@ If no number is specified, all cards are displayed."""
         """ Show the tracks played so far and tell how many tracks remain to be played. 
         You can enter a track number to replay a track."""
         if self.active_game:
-            self.active_game.game_monitor.show_played_tracks(self.active_game, replay_number)
+            self.active_game.game_monitor.show_played_tracks(self.active_game, replay_number, self)
         else:
            print('There is not an active game. Create one using "'"makegame"'" and try again.')  
 
@@ -1080,6 +1094,13 @@ def load_game_state(load_number):
     with open (path, 'rb') as fp:
         restored_game = pickle.load(fp)
     return restored_game
+
+def clear_web_votes(cmd_processor):
+    if cmd_processor.web_monitor and cmd_processor.web_monitor._running:
+        # We are monitoring user votes to skip but we have told the game to
+        # start a new track.
+        # Reset the number of votes to skip to zero because a new song is playing.
+        requests.get(web_controller_url+'/clear')
 
 
 
