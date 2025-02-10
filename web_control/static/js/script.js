@@ -145,7 +145,7 @@ async function updateStops()
   {
     if (result.stoprequests.length!=0)
     {  
-  //    responseMessage.textContent = `IDs that have voted: ${result.stoprequests}`;
+      // responseMessage.textContent = `IDs that have voted: ${result.stoprequests}`;
       responseMessage.textContent = `Votes received so far: ${result.stoprequests.length}`;
     }
     else
