@@ -726,10 +726,16 @@ class WebMonitor():
     def no_voting(self):
         self._voting_allowed = False
     
+    def voting(self):
+        self._voting_allowed = True
+
     def _run(self):
         while self._running:
             # print('inside running')
-            stop_count = int(requests.get(web_controller_url+'/get_stop_count').content)
+            if self._voting_allowed:
+                stop_count = int(requests.get(web_controller_url+'/get_stop_count').content)
+            else:
+                stop_count = 0
             win_claims_json = requests.get(web_controller_url+'/win_claims')
             win_claims = win_claims_json.json()["win_claims"]
             # print(f"Claims : {win_claims}, length is {str(len(win_claims))}")
@@ -743,7 +749,7 @@ class WebMonitor():
                 self._cmdprocessor.do_view(card_to_check)
             
             # print(stop_count)
-            if (stop_count>=self._trigger_vote_count):
+            if (self._voting_allowed and stop_count>=self._trigger_vote_count):
                 requests.get(web_controller_url+'/clear')
                 self._cmdprocessor.do_nexttrack(self._cmdprocessor)
             time.sleep(1)
@@ -812,12 +818,13 @@ class CommandProcessor(cmd.Cmd):
 
     def do_auto(self, next_trigger_votes):
             if next_trigger_votes and int(next_trigger_votes) > 0:
+                self.web_monitor.voting()
                 # Only start the web monitor thread once (a singleton)
                 # If there are multiple monitor threads, songs may be skipped
                 if not self.web_monitor:
                     self.web_monitor = WebMonitor(self, next_trigger_votes)
                     print('The Web Monitor has been started. Next song triggers when ',next_trigger_votes, ' are received')      
-                    self.do_nexttrack(self)
+                    # self.do_nexttrack(self)
                     self.web_monitor.start()
                     # Use the value of progress > 0 to determine when the nexttrack should
                     # start automatically
@@ -836,14 +843,22 @@ class CommandProcessor(cmd.Cmd):
                                     json=json.dumps(votes_required))
             elif next_trigger_votes and int(next_trigger_votes) == 0:
                 print('Zero trigger votes case')
+
                 # self.do_pause(self)
                 # Send the zero to the web controller to block further voting
                 votes_required = {"votes_required": next_trigger_votes}
                 requests.post(web_controller_url+'/set_votes_required',
                                     json=json.dumps(votes_required))
+
+                if not self.web_monitor:
+                    self.web_monitor = WebMonitor(self, next_trigger_votes)
+
+
+
                 if self.web_monitor:
                     print('No more voting via the Web Monitor. You may re-start it to resume play.')      
                     # self.web_monitor.stop()
+                    self.web_monitor.start()
                     self.web_monitor.no_voting()
             else:
                 print('You must enter the number of votes that will cause the next song to play')    
