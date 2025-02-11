@@ -6,3 +6,4 @@
 *.bin
 *.log
 .gitignore
+web_control/sftp-config.json

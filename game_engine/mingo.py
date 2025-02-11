@@ -659,7 +659,7 @@ class GameMonitor():
         else:
             return False
 
-    def show_played_tracks(self, active_game, replay_track):
+    def show_played_tracks(self, active_game, replay_track, cmd_processor):
         num_played = len(self.played_track_names)
         num_remaining = self.num_total_tracks - num_played
 
@@ -679,6 +679,11 @@ class GameMonitor():
                         replay_index = replay_index
                         print (f'Replay index: {replay_index}')
                         active_game.play_previous_track(replay_index) # was -1
+
+                        # Since we are playing another track, clear out the
+                        # votes that may have been cast to skip
+                        clear_web_votes(cmd_processor)
+
                     else:
                         print('There is not an active game.')
                 else:
@@ -697,6 +702,7 @@ class WebMonitor():
         self._thread = None
         self._cmdprocessor = cmdprocessor
         self._trigger_vote_count = int(trigger_vote_count)
+        self._voting_allowed = True
 
     def start(self):
         if not self._running:
@@ -706,6 +712,7 @@ class WebMonitor():
             requests.get(web_controller_url+'/clear')
             print('trying to start WebMonitor')
             self._running = True
+            self._voting_allowed = True
             self._thread = threading.Thread(target=self._run)
             self._thread.start()
             print('should be started')
@@ -715,11 +722,20 @@ class WebMonitor():
         self._running = False
         if self._thread is not None:
             self._thread.join()
+
+    def no_voting(self):
+        self._voting_allowed = False
     
+    def voting(self):
+        self._voting_allowed = True
+
     def _run(self):
         while self._running:
             # print('inside running')
-            stop_count = int(requests.get(web_controller_url+'/get_stop_count').content)
+            if self._voting_allowed:
+                stop_count = int(requests.get(web_controller_url+'/get_stop_count').content)
+            else:
+                stop_count = 0
             win_claims_json = requests.get(web_controller_url+'/win_claims')
             win_claims = win_claims_json.json()["win_claims"]
             # print(f"Claims : {win_claims}, length is {str(len(win_claims))}")
@@ -733,10 +749,12 @@ class WebMonitor():
                 self._cmdprocessor.do_view(card_to_check)
             
             # print(stop_count)
-            if (stop_count>=self._trigger_vote_count):
+            if (self._voting_allowed and stop_count>=self._trigger_vote_count):
                 requests.get(web_controller_url+'/clear')
                 self._cmdprocessor.do_nexttrack(self._cmdprocessor)
             time.sleep(1)
+
+
 
 
 #-------------------------------------------------------------------
@@ -800,12 +818,13 @@ class CommandProcessor(cmd.Cmd):
 
     def do_auto(self, next_trigger_votes):
             if next_trigger_votes and int(next_trigger_votes) > 0:
+                self.web_monitor.voting()
                 # Only start the web monitor thread once (a singleton)
                 # If there are multiple monitor threads, songs may be skipped
                 if not self.web_monitor:
                     self.web_monitor = WebMonitor(self, next_trigger_votes)
                     print('The Web Monitor has been started. Next song triggers when ',next_trigger_votes, ' are received')      
-                    self.do_nexttrack(self)
+                    # self.do_nexttrack(self)
                     self.web_monitor.start()
                     # Use the value of progress > 0 to determine when the nexttrack should
                     # start automatically
@@ -824,15 +843,23 @@ class CommandProcessor(cmd.Cmd):
                                     json=json.dumps(votes_required))
             elif next_trigger_votes and int(next_trigger_votes) == 0:
                 print('Zero trigger votes case')
+
                 # self.do_pause(self)
                 # Send the zero to the web controller to block further voting
                 votes_required = {"votes_required": next_trigger_votes}
                 requests.post(web_controller_url+'/set_votes_required',
                                     json=json.dumps(votes_required))
-                if self.web_monitor:
-                    print('Stopping the Web Monitor. You may re-start it to resume play.')      
-                    self.web_monitor.stop()
 
+                if not self.web_monitor:
+                    self.web_monitor = WebMonitor(self, next_trigger_votes)
+
+
+
+                if self.web_monitor:
+                    print('No more voting via the Web Monitor. You may re-start it to resume play.')      
+                    # self.web_monitor.stop()
+                    self.web_monitor.start()
+                    self.web_monitor.no_voting()
             else:
                 print('You must enter the number of votes that will cause the next song to play')    
 
@@ -922,6 +949,8 @@ If no number is specified, all cards are displayed."""
         if self.active_game:
             self.active_game.play_next_track()
             self.active_game.write_game_state()
+            clear_web_votes(self)
+
         else:
            print('There is not an active game. Create one using "'"makegame"'" and try again.')  
 
@@ -975,7 +1004,7 @@ If no number is specified, all cards are displayed."""
         """ Show the tracks played so far and tell how many tracks remain to be played. 
         You can enter a track number to replay a track."""
         if self.active_game:
-            self.active_game.game_monitor.show_played_tracks(self.active_game, replay_number)
+            self.active_game.game_monitor.show_played_tracks(self.active_game, replay_number, self)
         else:
            print('There is not an active game. Create one using "'"makegame"'" and try again.')  
 
@@ -1080,6 +1109,13 @@ def load_game_state(load_number):
     with open (path, 'rb') as fp:
         restored_game = pickle.load(fp)
     return restored_game
+
+def clear_web_votes(cmd_processor):
+    if cmd_processor.web_monitor and cmd_processor.web_monitor._running:
+        # We are monitoring user votes to skip but we have told the game to
+        # start a new track.
+        # Reset the number of votes to skip to zero because a new song is playing.
+        requests.get(web_controller_url+'/clear')
 
 
 
