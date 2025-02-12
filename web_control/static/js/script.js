@@ -130,17 +130,31 @@ async function updateStops()
   if (result.votes_required > 0)
   {
     stopButton.style.display = 'block';
-    winnerButton.disabled = false;
+    winnerButton.style.display = 'block';
     votesRequired.textContent = `Votes needed to skip to next song: ${result.votes_required}`;
   }
-  else
+  else if (result.votes_required == 0)
   {
-    // stopButton.disabled = true;
     stopButton.style.display = 'none';
-    winnerButton.disabled = false;
-    // responseMessage.textContent = `The system is waiting for the Game Operator to start it.`;
+    winnerButton.style.display = 'block';
     responseMessage.textContent = '';
     votesRequired.textContent = '';
+  }
+  else if (result.votes_required == -1)
+  {
+    stopButton.style.display = 'none';
+    winnerButton.style.display = 'none';
+    responseMessage.textContent = `The system is waiting for the Game Operator to start it.`;
+    votesRequired.textContent = '';
+
+  }
+  else if (result.votes_required == -2)
+  {
+    stopButton.style.display = 'none';
+    winnerButton.style.display = 'none';
+    responseMessage.textContent = ``;
+    votesRequired.textContent = '';
+
   }
 
   if (result.votes_required > 0) 
@@ -223,16 +237,6 @@ function syncJsonPostRequest(url, data) {
 // submitButton.addEventListener('click', postData);
 stopButton.addEventListener('click', postStopRequest);
 
-const releaseButton = document.getElementById('release_id');
-
-// Click event listener to start game
-releaseButton.addEventListener('click', releaseId);
-
-function releaseId()
-{
-    console.log('Releasing id: ', cardNumber);
-    window.location.href = host_url_main+'/rel';    
-}
 
 
 // update every 500 msec

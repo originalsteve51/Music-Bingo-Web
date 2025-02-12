@@ -1,7 +1,7 @@
 """
 MIT License
 
-Copyright (c) 2021, 2024 Stephen Harding
+Copyright (c) 2021, 2025 Stephen Harding
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -763,7 +763,8 @@ class WebMonitor():
 # input by recognizing commands and dispatching them.
 #-------------------------------------------------------------------
 class CommandProcessor(cmd.Cmd):
-    prompt = '(No active game)'
+    prompt = '(No active game'
+    auto_cmd = ''
     def __init__(self):
         super(CommandProcessor, self).__init__()
         self.active_game = None
@@ -817,15 +818,25 @@ class CommandProcessor(cmd.Cmd):
             print('There is not an active game. Create one using "makegame" and try again.')  
 
     def do_auto(self, next_trigger_votes):
+            self.auto_cmd = f':auto {next_trigger_votes})'
+            if self.active_game:
+                self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
+            else:
+                self.prompt = f'(No Active Game'+self.auto_cmd
+
             if next_trigger_votes and int(next_trigger_votes) > 0:
+                # Non-zero voting is enabled. Tell the web monitor to watch for votes.
                 self.web_monitor.voting()
+
+
                 # Only start the web monitor thread once (a singleton)
-                # If there are multiple monitor threads, songs may be skipped
+                # If there are multiple monitor threads, songs will be skipped
                 if not self.web_monitor:
                     self.web_monitor = WebMonitor(self, next_trigger_votes)
                     print('The Web Monitor has been started. Next song triggers when ',next_trigger_votes, ' are received')      
-                    # self.do_nexttrack(self)
+                    
                     self.web_monitor.start()
+                    
                     # Use the value of progress > 0 to determine when the nexttrack should
                     # start automatically
                     # progress = self.active_game.currently_playing()[0]
@@ -837,27 +848,32 @@ class CommandProcessor(cmd.Cmd):
                     else:
                         print('Starting the Web Monitor.')
                         self.web_monitor.start()
-                # Send next_trigger_votes to web controller
+                
+                # Send next_trigger_votes to web controller so it will update
+                # this on each user screen
                 votes_required = {"votes_required": next_trigger_votes}
                 requests.post(web_controller_url+'/set_votes_required',
                                     json=json.dumps(votes_required))
-            elif next_trigger_votes and int(next_trigger_votes) == 0:
-                print('Zero trigger votes case')
 
-                # self.do_pause(self)
+            elif next_trigger_votes and int(next_trigger_votes) <= 0:
+                if next_trigger_votes == 0:
+                    print('Zero trigger votes')
+                else:
+                    print(f'{next_trigger_votes} requested')
+
                 # Send the zero to the web controller to block further voting
+                # and to update the info on each user screen
                 votes_required = {"votes_required": next_trigger_votes}
                 requests.post(web_controller_url+'/set_votes_required',
                                     json=json.dumps(votes_required))
 
+                # Even when not voting we want the 'Winner' button to work, so
+                # start the monitor if not running already to keep track of Winner claims.
                 if not self.web_monitor:
                     self.web_monitor = WebMonitor(self, next_trigger_votes)
 
-
-
-                if self.web_monitor:
-                    print('No more voting via the Web Monitor. You may re-start it to resume play.')      
-                    # self.web_monitor.stop()
+                # if self.web_monitor:
+                    print('No more voting via the Web Monitor.')      
                     self.web_monitor.start()
                     self.web_monitor.no_voting()
             else:
@@ -908,7 +924,7 @@ or issue the ''continuegame'' command to restart an old game.')
             # Save the game state before any songs are played. Then if the
             # user quits immediately, the unplayed game can be continued.
             self.active_game.write_game_state()
-            self.prompt = f'({self.active_game.playlist_name})'
+            self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
             print(f'A new game has been made with {num_cards} cards.')
             print('\nYou can use the "view" command to display and print the Mingo cards for this game.')
             print('You can begin playing tracks in random order by using the "nexttrack" command for each track.')
@@ -922,7 +938,7 @@ saved. Use this command to resume playing a stopped game from when you stopped i
 
         try:
             self.active_game = restore_game_state()
-            self.prompt = f'({self.active_game.playlist_name})'
+            self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
             print('The previous game state has been restored. You can continue playing it now.')
 
         except Exception as error:
@@ -1026,6 +1042,7 @@ If no number is specified, all cards are displayed."""
         cleaning up as necessary. The state of a game in progress is saved
         so you can use continuegame to resume a game if you want.
         """
+        self.do_auto('-2')
         cleanup_before_exiting(self)
         raise ExitCmdException()
 
@@ -1049,7 +1066,7 @@ If no number is specified, all cards are displayed."""
         else:
             try:
                 self.active_game = load_game_state(load_number)
-                self.prompt = f'({self.active_game.playlist_name})'
+                self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
                 print('A saved game state has been restored. You can continue playing it now.')
 
             except Exception as error:
@@ -1134,6 +1151,7 @@ if __name__ == '__main__':
         try:
             if cp is None:
                 cp = CommandProcessor()
+                cp.do_auto('-1')
             cp.cmdloop()
         except KeyboardInterrupt:
             print('Interrupted by ctrl-C, attempting to clean up first')
