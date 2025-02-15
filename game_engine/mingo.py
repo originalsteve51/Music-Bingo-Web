@@ -763,8 +763,10 @@ class WebMonitor():
 # input by recognizing commands and dispatching them.
 #-------------------------------------------------------------------
 class CommandProcessor(cmd.Cmd):
-    prompt = '(No active game'
+    prompt = '\033[97m(No active game'
+    # '\033[97m(Issue a command)\033[0m'
     auto_cmd = ''
+    end_highlight='\033[0m'
     def __init__(self):
         super(CommandProcessor, self).__init__()
         self.active_game = None
@@ -820,9 +822,9 @@ class CommandProcessor(cmd.Cmd):
     def do_auto(self, next_trigger_votes):
             self.auto_cmd = f':auto {next_trigger_votes})'
             if self.active_game:
-                self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
+                self.prompt = f'\033[97m({self.active_game.playlist_name}'+self.auto_cmd+self.end_highlight
             else:
-                self.prompt = f'(No Active Game'+self.auto_cmd
+                self.prompt = f'\033[97m(No Active Game'+self.auto_cmd+self.end_highlight
 
             if next_trigger_votes and int(next_trigger_votes) > 0:
                 # Non-zero voting is enabled. Tell the web monitor to watch for votes.
@@ -924,7 +926,7 @@ or issue the ''continuegame'' command to restart an old game.')
             # Save the game state before any songs are played. Then if the
             # user quits immediately, the unplayed game can be continued.
             self.active_game.write_game_state()
-            self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
+            self.prompt = f'\033[97m({self.active_game.playlist_name}'+self.auto_cmd+self.end_highlight
             print(f'A new game has been made with {num_cards} cards.')
             print('\nYou can use the "view" command to display and print the Mingo cards for this game.')
             print('You can begin playing tracks in random order by using the "nexttrack" command for each track.')
@@ -938,7 +940,7 @@ saved. Use this command to resume playing a stopped game from when you stopped i
 
         try:
             self.active_game = restore_game_state()
-            self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
+            self.prompt = f'\033[97m({self.active_game.playlist_name}'+self.auto_cmd+self.end_highlight
             print('The previous game state has been restored. You can continue playing it now.')
 
         except Exception as error:
@@ -1066,7 +1068,7 @@ If no number is specified, all cards are displayed."""
         else:
             try:
                 self.active_game = load_game_state(load_number)
-                self.prompt = f'({self.active_game.playlist_name}'+self.auto_cmd
+                self.prompt = f'\033[97m({self.active_game.playlist_name}'+self.auto_cmd+self.end_highlight
                 print('A saved game state has been restored. You can continue playing it now.')
 
             except Exception as error:
