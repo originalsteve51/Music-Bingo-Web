@@ -71,26 +71,27 @@ def assign_player_id(player_id):
         print('Assigning player id', player_id)
         active_player_ids.add(player_id)
         inactive_player_ids.remove(player_id)
+        update_validity_flags()
 
         return activate_player(player_id)
-
-        """
-        session['player_id'] = player_id
-
-        if len(cards) != 0:
-            return redirect(url_for('card'))
-        else:
-            return render_template('game_not_ready.html', 
-                                    player_id=player_id, 
-                                    run_on_host=run_on_host, 
-                                    using_port=using_port)
-        """
 
     else:
         return render_template('invalid_id.html', 
                               player_id=player_id,
                               run_on_host=run_on_host, 
                               using_port=using_port)
+
+def update_validity_flags():
+    global active_player_ids
+    global inactive_player_ids
+    global invalid_login
+
+    for _ in active_player_ids:
+        invalid_login[_] = False
+    for _ in inactive_player_ids:
+        invalid_login[_] = True
+
+
 
 @app.route('/rel', methods=['GET'])
 def release_player_id():
@@ -114,6 +115,7 @@ def release_player_id():
             print('Player id is not in session anymore')
 
         reset_player_storage[release_id] = True
+        update_validity_flags()
 
         print(f'Released {release_id} for reuse and removed player_id from session')
 
@@ -135,11 +137,14 @@ def add_inactive_player():
         # base the new id on the largest active player id
         new_player_id = max(active_player_ids)+1
 
+        # Also need to grow the invalid_login and reset_player_storage lists
+        invalid_login.append(True)
+        reset_player_storage.append(False)
+
     inactive_player_ids.add(new_player_id)
-    
-    # Also need to grow the invalid_login and reset_player_storage lists
-    invalid_login.append(True)
-    reset_player_storage.append(False)
+
+    # Make sure validity flags stay in sync
+    update_validity_flags()    
 
     return redirect(url_for('admin'))
 
@@ -333,6 +338,7 @@ def join_game():
             if player_id in active_player_ids:
                 active_player_ids.remove(player_id)
                 inactive_player_ids.add(player_id)
+                update_validity_flags()
         
             return activate_player(new_player_id)
         
@@ -340,6 +346,7 @@ def join_game():
             # player_id = inactive_player_ids.pop()
             player_id = min(inactive_player_ids)
             inactive_player_ids.remove(player_id)
+            update_validity_flags()
             return activate_player(player_id)
     else:
         return render_template('game_is_locked.html', 
